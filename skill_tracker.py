@@ -23,6 +23,10 @@ learning_path = [
     "数据结构与算法",
 ]
 
+# 作用：集中定义技能的基础合格线。
+# 后续如果规则变化，只需要修改这一处数值。
+PASSING_SCORE = 60
+
 
 # 作用：检查数据是否完整、掌握度是否处于合理范围。
 # 参数 progress_data 是传入的技能字典；ordered_skills 是传入的学习顺序列表。
@@ -54,30 +58,30 @@ def calculate_average(progress_data, ordered_skills):
     return total_progress / len(ordered_skills)
 
 
-# 作用：找出第一项尚未达到 60% 基础合格线的技能。
-def find_next_focus(progress_data, ordered_skills):
-    # 作用：按既定学习顺序逐项检查。
+# 作用：找出第一项未达到指定合格线的技能。
+def find_next_focus(progress_data, ordered_skills, target_progress):
+    # 作用：按照学习顺序逐项检查。
     for skill in ordered_skills:
-        # 作用：找到第一项未达标技能后立刻返回，避免无效遍历。
-        if progress_data[skill] < 60:
+        # 作用：使用传入的合格线判断，而不再把 60 写死。
+        if progress_data[skill] < target_progress:
             return skill
 
-    # 作用：如果全部技能都合格，返回 None，表示没有当前重点。
+    # 作用：全部达标时返回 None。
     return None
 
 
-# 作用：筛选所有尚未达到 60% 的技能，并形成能力缺口列表。
-def find_skill_gaps(progress_data, ordered_skills):
-    # 作用：创建空列表，准备收集待提升技能。
+# 作用：找出所有未达到指定合格线的技能。
+def find_skill_gaps(progress_data, ordered_skills, target_progress):
+    # 作用：创建空列表，用于保存待提升技能。
     skill_gaps = []
 
-    # 作用：逐项检查技能掌握度。
+    # 作用：按学习顺序筛选未达标技能。
     for skill in ordered_skills:
-        # 作用：把未达标技能加入列表。
-        if progress_data[skill] < 60:
+        # 作用：使用传入的合格线进行判断。
+        if progress_data[skill] < target_progress:
             skill_gaps.append(skill)
 
-    # 作用：把分析得到的列表交还给调用者。
+    # 作用：返回待提升技能列表。
     return skill_gaps
 
 
@@ -112,12 +116,15 @@ validate_skill_data(skill_progress, learning_path)
 
 # 作用：依次调用函数，获得报告所需的分析结果。
 average_progress = calculate_average(skill_progress, learning_path)
-next_focus = find_next_focus(skill_progress, learning_path)
-skill_gaps = find_skill_gaps(skill_progress, learning_path)
-current_stage = get_current_stage(average_progress)
+# 作用：调用函数时，把统一的合格线作为参数传入。
+next_focus = find_next_focus(skill_progress, learning_path, PASSING_SCORE)
 
-# 作用：计算当前重点与 60% 合格线之间的差距。
-next_focus_gap = 60 - skill_progress[next_focus]
+# 作用：调用函数时，把统一的合格线作为参数传入。
+skill_gaps = find_skill_gaps(skill_progress, learning_path, PASSING_SCORE)
+
+# 作用：计算当前重点距离统一合格线的差距。
+next_focus_gap = PASSING_SCORE - skill_progress[next_focus]
+current_stage = get_current_stage(average_progress)
 
 # 作用：把全部计算结果交给报告函数输出。
 print_report(
