@@ -110,27 +110,94 @@ def print_report(average_progress, current_stage, next_focus, next_focus_gap, sk
     print(f"待提升技能：{gaps_text}")
     print("====================================")
 
+# 作用：显示当前技能，并接收一次用户输入来更新一项技能进度。
+# 成功更新返回 True；输入无效时返回 False，且不修改原始数据。
+def prompt_skill_update(progress_data, ordered_skills):
+    # 作用：先展示可更新的技能和当前进度，避免用户记错名称。
+    print("\n当前技能进度：")
+    for skill in ordered_skills:
+        print(f"- {skill}：{progress_data[skill]}%")
 
-# 作用：在开始计算前，先保证数据可靠。
-validate_skill_data(skill_progress, learning_path)
+    # 作用：读取技能名称；strip() 会去除输入前后的空格。
+    skill_name = input("\n请输入要更新的技能名称：").strip()
 
-# 作用：依次调用函数，获得报告所需的分析结果。
-average_progress = calculate_average(skill_progress, learning_path)
-# 作用：调用函数时，把统一的合格线作为参数传入。
-next_focus = find_next_focus(skill_progress, learning_path, PASSING_SCORE)
+    # 作用：若技能不存在，停止本次更新，保护原始数据。
+    if skill_name not in ordered_skills:
+        print(f"更新失败：未找到技能“{skill_name}”。")
+        return False
 
-# 作用：调用函数时，把统一的合格线作为参数传入。
-skill_gaps = find_skill_gaps(skill_progress, learning_path, PASSING_SCORE)
+    # 作用：读取掌握度文本；input() 得到的永远是字符串。
+    raw_progress = input("请输入新的掌握度（0-100）：").strip()
 
-# 作用：计算当前重点距离统一合格线的差距。
-next_focus_gap = PASSING_SCORE - skill_progress[next_focus]
-current_stage = get_current_stage(average_progress)
+    # 作用：尝试把文本转成整数；转换失败时捕获 ValueError，避免程序崩溃。
+    try:
+        new_progress = int(raw_progress)
+    except ValueError:
+        print("更新失败：掌握度必须是 0 到 100 之间的整数。")
+        return False
 
-# 作用：把全部计算结果交给报告函数输出。
-print_report(
-    average_progress,
-    current_stage,
-    next_focus,
-    next_focus_gap,
-    skill_gaps,
-)
+    # 作用：拒绝超出合理范围的数字，避免污染技能数据。
+    if not 0 <= new_progress <= 100:
+        print("更新失败：掌握度必须是 0 到 100 之间的整数。")
+        return False
+
+    # 作用：所有校验通过后，才真正修改字典中的技能进度。
+    progress_data[skill_name] = new_progress
+
+    # 作用：告知用户本次更新结果。
+    print(f"更新成功：{skill_name} 已更新为 {new_progress}%。")
+    return True
+
+
+
+# 作用：组织一次完整的技能分析流程。
+# 当前版本先验证数据并生成报告；下一步会在这里加入用户输入。
+def main():
+    # 作用：在计算前保证技能名称和掌握度都合法。
+    validate_skill_data(skill_progress, learning_path)
+
+   # 作用：运行更新函数，并接收它返回的成功或失败状态。
+    update_succeeded = prompt_skill_update(skill_progress, learning_path)
+
+# 作用：当输入无效时明确告知用户，后续报告将使用未修改的数据。
+    if not update_succeeded:
+        print("提示：本次输入无效，报告将使用原有技能数据。")
+
+    # 作用：根据当前技能Python
+    # 数据计算平均掌握度。
+    average_progress = calculate_average(skill_progress, learning_path)
+
+    # 作用：找出下一项未达到合格线的重点技能。
+    next_focus = find_next_focus(
+        skill_progress,
+        learning_path,
+        PASSING_SCORE,
+    )
+
+    # 作用：找出所有未达到合格线的技能。
+    skill_gaps = find_skill_gaps(
+        skill_progress,
+        learning_path,
+        PASSING_SCORE,
+    )
+
+    # 作用：根据平均掌握度判断当前学习阶段。
+    current_stage = get_current_stage(average_progress)
+
+    # 作用：计算当前重点距离合格线的差距。
+    next_focus_gap = PASSING_SCORE - skill_progress[next_focus]
+
+    # 作用：输出本次完整的技能分析报告。
+    print_report(
+        average_progress,
+        current_stage,
+        next_focus,
+        next_focus_gap,
+        skill_gaps,
+    )
+
+
+# 作用：只有直接运行本文件时才执行 main。
+# 如果其他程序导入 skill_tracker，则不会自动输出报告。
+if __name__ == "__main__":
+    main()
