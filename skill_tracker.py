@@ -1,16 +1,30 @@
 # 作用：AI 求职技能追踪器。
 # 本程序使用字典、列表、循环、条件判断和函数，生成学习差距分析报告。
 
-# 作用：保存“技能名称：当前掌握度”的原始数据。
-skill_progress = {
-    "Python": 35,
-    "Git": 30,
-    "SQL": 0,
-    "后端开发": 0,
-    "机器学习": 0,
-    "大模型应用": 0,
-    "数据结构与算法": 0,
-}
+# 作用：导入 Python 自带的 JSON 工具，用于读取和保存技能数据。
+import json
+
+# 作用：导入 Path，用更可靠的方式定位与当前代码同目录的数据文件。
+from pathlib import Path
+
+# 作用：定位与当前 Python 文件位于同一目录的 JSON 数据文件。
+DATA_FILE = Path(__file__).with_name("skill_progress.json")
+
+
+# 作用：从 JSON 文件读取技能进度，并转换为 Python 字典。
+def load_skill_progress():
+    # 作用：以 UTF-8 编码打开数据文件，确保中文技能名称正常读取。
+    with DATA_FILE.open("r", encoding="utf-8") as file:
+        # 作用：将 JSON 文件内容转换为 Python 字典后返回。
+        return json.load(file)
+
+
+# 作用：将更新后的技能进度字典保存回 JSON 文件。
+def save_skill_progress(progress_data):
+    # 作用：以写入模式打开文件；文件存在时覆盖旧内容，不存在时自动创建。
+    with DATA_FILE.open("w", encoding="utf-8") as file:
+        # 作用：将字典写成格式清晰、保留中文的 JSON 数据。
+        json.dump(progress_data, file, ensure_ascii=False, indent=2)
 
 # 作用：定义技能学习的推荐顺序。
 learning_path = [
@@ -153,13 +167,20 @@ def prompt_skill_update(progress_data, ordered_skills):
 # 作用：组织一次完整的技能分析流程。
 # 当前版本先验证数据并生成报告；下一步会在这里加入用户输入。
 def main():
+    # 作用：每次启动程序时，从 JSON 文件读取上一次保存的技能进度。
+    skill_progress = load_skill_progress()
+
     # 作用：在计算前保证技能名称和掌握度都合法。
     validate_skill_data(skill_progress, learning_path)
 
    # 作用：运行更新函数，并接收它返回的成功或失败状态。
     update_succeeded = prompt_skill_update(skill_progress, learning_path)
 
-# 作用：当输入无效时明确告知用户，后续报告将使用未修改的数据。
+    # 作用：只有用户成功完成更新时，才把新数据写回 JSON 文件。
+    if update_succeeded:
+        save_skill_progress(skill_progress)
+        
+    # 作用：当输入无效时明确告知用户，后续报告将使用未修改的数据。
     if not update_succeeded:
         print("提示：本次输入无效，报告将使用原有技能数据。")
 
