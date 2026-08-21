@@ -8,10 +8,11 @@ from contextlib import closing
 from pathlib import Path
 
 
-# 作用：定位 career.db。
-# __file__ 表示当前 Python 文件的位置；
-# with_name() 表示在同一目录下找到另一个文件。
-DATABASE_PATH = Path(__file__).with_name("career.db")
+# 作用：导入项目统一配置。
+from settings import settings
+# 作用：根据配置文件定位数据库。
+DATABASE_PATH = Path(__file__).with_name(settings.database_path)
+
 
 # 作用：执行任意查询，并将所有结果转换为字典列表。
 # query 是 SQL 语句；parameters 是 SQL 占位符对应的参数。
