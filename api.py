@@ -98,14 +98,33 @@ def read_priority_skills(
 
 
 
-# 作用：查询岗位技能缺口，并声明返回一个 SkillGap 列表。
+# 作用：分页查询指定岗位的技能缺口。
 @app.get("/skills/gaps", response_model=list[SkillGap])
 def read_skill_gaps(
     # 作用：接收岗位名称，并设置默认岗位。
     role_name: str = "AI Application Engineer",
+
+    # 作用：指定本页最多返回多少条数据，限制在 1 到 100。
+    limit: int = Query(default=20, ge=1, le=100),
+
+    # 作用：指定跳过多少条数据，不能为负数。
+    offset: int = Query(default=0, ge=0),
 ):
-    # 作用：查询数据库，并让 FastAPI 按 SkillGap 模型校验返回结果。
-    return get_skill_gaps(role_name)
+    # 作用：记录分页查询参数，方便排查请求问题。
+    logger.info(
+        "查询技能缺口，role=%s, limit=%s, offset=%s",
+        role_name,
+        limit,
+        offset,
+    )
+
+    # 作用：将岗位名称和分页参数传给数据库查询层。
+    return get_skill_gaps(
+        role_name,
+        limit,
+        offset,
+    )
+
 
 # 作用：定义修改技能进度的 PATCH 接口。
 @app.patch(

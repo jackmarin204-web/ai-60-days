@@ -53,25 +53,53 @@ def get_priority_skills(minimum_priority: int) -> list[dict]:
 
 # 作用：查询指定岗位的全部技能要求，并计算个人当前进度与岗位目标之间的差距。
 # 作用：查询指定岗位的全部技能要求，并计算个人技能缺口。
-def get_skill_gaps(role_name: str) -> list[dict]:
-    # 作用：定义岗位技能缺口查询。
-    query = """
-        SELECT
-            requirements.skill_name,
-            requirements.target_level,
-            COALESCE(progress.current_level, 0) AS current_level,
-            requirements.target_level
-                - COALESCE(progress.current_level, 0) AS skill_gap,
-            requirements.priority
-        FROM job_requirements AS requirements
-        LEFT JOIN learning_progress AS progress
-            ON requirements.skill_name = progress.skill_name
-        WHERE requirements.role = ?
-        ORDER BY requirements.priority DESC, skill_gap DESC
-    """
+# 作用：分页查询指定岗位的技能缺口。
+def get_skill_gaps(
+    role_name: str,
+    limit: int = 20,
+    offset: int = 0,
+) -> list[dict]:
+    # 作用：限制单页最大数量，避免客户端一次请求过多数据。
+    if not 1 <= limit <= 100:
+        raise ValueError("limit 必须在 1 到 100 之间。")
 
-    # 作用：复用统一查询函数，并传入岗位名称。
-    return fetch_all(query, (role_name,))
+    # 作用：offset 不能是负数。
+    if offset < 0:
+        raise ValueError("offset 不能小于 0。")
+
+    # 作用：建立数据库连接。
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    try:
+        # 作用：允许通过列名读取查询结果。
+        connection.row_factory = sqlite3.Row
+
+        # 作用：查询岗位技能，并限制本次返回的记录范围。
+        cursor = connection.execute(
+            """
+            SELECT
+                requirements.skill_name,
+                requirements.target_level,
+                COALESCE(progress.current_level, 0) AS current_level,
+                requirements.target_level
+                    - COALESCE(progress.current_level, 0) AS skill_gap,
+                requirements.priority
+            FROM job_requirements AS requirements
+            LEFT JOIN learning_progress AS progress
+                ON requirements.skill_name = progress.skill_name
+            WHERE requirements.role = ?
+            ORDER BY requirements.priority DESC, skill_gap DESC
+            LIMIT ? OFFSET ?
+            """,
+            (role_name, limit, offset),
+        )
+
+        # 作用：读取当前页的数据并转换为字典列表。
+        return [dict(row) for row in cursor.fetchall()]
+
+    finally:
+        # 作用：无论查询成功还是失败，都关闭数据库连接。
+        connection.close()
 
 # 作用：更新某项技能的个人掌握度，并返回更新后的记录。
 def update_skill_progress(skill_name: str, current_level: int) -> dict:
