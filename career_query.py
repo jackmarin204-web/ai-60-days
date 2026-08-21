@@ -73,7 +73,63 @@ def get_skill_gaps(role_name: str) -> list[dict]:
     # 作用：复用统一查询函数，并传入岗位名称。
     return fetch_all(query, (role_name,))
 
+# 作用：更新某项技能的个人掌握度，并返回更新后的记录。
+def update_skill_progress(skill_name: str, current_level: int) -> dict:
+    # 作用：在数据库层再次校验数值范围，不能只依赖 API 层。
+    if not 0 <= current_level <= 100:
+        raise ValueError("掌握度必须在 0 到 100 之间。")
 
+    # 作用：建立数据库连接。
+    connection = sqlite3.connect(DATABASE_PATH)
+
+    try:
+        # 作用：让查询结果支持通过列名读取。
+        connection.row_factory = sqlite3.Row
+
+        # 作用：确认这项技能确实存在于岗位要求表中。
+        skill_row = connection.execute(
+            """
+            SELECT skill_name
+            FROM job_requirements
+            WHERE skill_name = ?
+            """,
+            (skill_name,),
+        ).fetchone()
+
+        # 作用：拒绝更新不存在的技能，避免写入无效数据。
+        if skill_row is None:
+            raise ValueError(f"不存在技能：{skill_name}")
+
+        # 作用：新增技能进度；如果技能已存在，则更新原有进度。
+        connection.execute(
+            """
+            INSERT INTO learning_progress (skill_name, current_level)
+            VALUES (?, ?)
+            ON CONFLICT(skill_name)
+            DO UPDATE SET current_level = excluded.current_level
+            """,
+            (skill_name, current_level),
+        )
+
+        # 作用：将修改永久保存到 career.db。
+        connection.commit()
+
+        # 作用：读取刚刚保存的数据，作为函数返回结果。
+        updated_row = connection.execute(
+            """
+            SELECT skill_name, current_level
+            FROM learning_progress
+            WHERE skill_name = ?
+            """,
+            (skill_name,),
+        ).fetchone()
+
+        # 作用：把数据库行转换为普通 Python 字典。
+        return dict(updated_row)
+
+    finally:
+        # 作用：无论成功还是失败，都关闭数据库连接。
+        connection.close()
 
 # 作用：组织当前文件被直接运行时的演示流程。
 def main():

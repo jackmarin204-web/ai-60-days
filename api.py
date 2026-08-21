@@ -1,12 +1,31 @@
 # 作用：导入 FastAPI 应用框架。
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 
 # 作用：导入已经写好的数据库查询函数。
 # 这些函数负责查询 career.db，API 文件不直接写 SQL。
-from career_query import get_priority_skills, get_skill_gaps
+from career_query import (
+    get_priority_skills,
+    get_skill_gaps,
+    update_skill_progress,
+)
 
 # 作用：导入 Pydantic，用于定义 API 数据模型和字段约束。
 from pydantic import BaseModel, Field
+
+# 作用：定义客户端发送的技能进度请求体。
+class ProgressUpdate(BaseModel):
+    # 作用：掌握度必须是 0 到 100 之间的整数。
+    current_level: int = Field(ge=0, le=100)
+
+
+# 作用：定义 API 成功返回的技能进度结构。
+class SkillProgressResponse(BaseModel):
+    # 作用：返回被更新的技能名称。
+    skill_name: str
+
+    # 作用：返回更新后的当前掌握度。
+    current_level: int = Field(ge=0, le=100)
+
 
 # 作用：定义“岗位技能”接口返回的数据结构。
 class PrioritySkill(BaseModel):
@@ -66,3 +85,29 @@ def read_skill_gaps(
 ):
     # 作用：查询数据库，并让 FastAPI 按 SkillGap 模型校验返回结果。
     return get_skill_gaps(role_name)
+
+# 作用：定义修改技能进度的 PATCH 接口。
+@app.patch(
+    "/progress/{skill_name}",
+    response_model=SkillProgressResponse,
+)
+def update_progress(
+    # 作用：从 URL 路径中取得要修改的技能名称。
+    skill_name: str,
+
+    # 作用：从 JSON 请求体中取得新的掌握度。
+    progress: ProgressUpdate,
+):
+    # 作用：调用数据库层执行实际更新。
+    try:
+        return update_skill_progress(
+            skill_name,
+            progress.current_level,
+        )
+
+    # 作用：将数据库层发现的不存在技能转换成 HTTP 404。
+    except ValueError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        )
