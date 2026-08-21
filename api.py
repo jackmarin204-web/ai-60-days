@@ -5,6 +5,40 @@ from fastapi import FastAPI, Query
 # 这些函数负责查询 career.db，API 文件不直接写 SQL。
 from career_query import get_priority_skills, get_skill_gaps
 
+# 作用：导入 Pydantic，用于定义 API 数据模型和字段约束。
+from pydantic import BaseModel, Field
+
+# 作用：定义“岗位技能”接口返回的数据结构。
+class PrioritySkill(BaseModel):
+    # 作用：技能名称必须是字符串。
+    skill_name: str
+
+    # 作用：技能分类必须是字符串。
+    category: str
+
+    # 作用：目标掌握度必须是 0 到 100 之间的整数。
+    target_level: int = Field(ge=0, le=100)
+
+    # 作用：岗位优先级必须是 1 到 5 之间的整数。
+    priority: int = Field(ge=1, le=5)
+
+
+# 作用：定义“技能缺口”接口返回的数据结构。
+class SkillGap(BaseModel):
+    # 作用：技能名称必须是字符串。
+    skill_name: str
+
+    # 作用：岗位要求的目标掌握度。
+    target_level: int = Field(ge=0, le=100)
+
+    # 作用：个人当前掌握度。
+    current_level: int = Field(ge=0, le=100)
+
+    # 作用：岗位目标与个人当前水平之间的差值。
+    skill_gap: int
+
+    # 作用：岗位对该技能的重要程度。
+    priority: int = Field(ge=1, le=5)
 
 # 作用：创建 FastAPI 应用对象。
 app = FastAPI(
@@ -14,21 +48,21 @@ app = FastAPI(
 )
 
 
-# 作用：定义 GET /skills/priority 接口，查询高优先级技能。
-@app.get("/skills/priority")
+# 作用：查询优先级技能，并声明返回一个 PrioritySkill 列表。
+@app.get("/skills/priority", response_model=list[PrioritySkill])
 def read_priority_skills(
-    # 作用：接收查询参数，并限制其范围为 1 到 5。
+    # 作用：接收最低优先级，并限制在 1 到 5 之间。
     minimum_priority: int = Query(default=4, ge=1, le=5),
 ):
-    # 作用：调用数据库访问层，并将结果自动转换为 JSON。
+    # 作用：查询数据库，并让 FastAPI 按 PrioritySkill 模型校验返回结果。
     return get_priority_skills(minimum_priority)
 
 
-# 作用：定义 GET /skills/gaps 接口，查询指定岗位的技能缺口。
-@app.get("/skills/gaps")
+# 作用：查询岗位技能缺口，并声明返回一个 SkillGap 列表。
+@app.get("/skills/gaps", response_model=list[SkillGap])
 def read_skill_gaps(
-    # 作用：接收岗位名称；默认查询 AI Application Engineer。
+    # 作用：接收岗位名称，并设置默认岗位。
     role_name: str = "AI Application Engineer",
 ):
-    # 作用：调用数据库访问层，返回岗位目标与个人进度的差距。
+    # 作用：查询数据库，并让 FastAPI 按 SkillGap 模型校验返回结果。
     return get_skill_gaps(role_name)
