@@ -12,6 +12,14 @@ from career_query import (
 # 作用：导入 Pydantic，用于定义 API 数据模型和字段约束。
 from pydantic import BaseModel, Field
 
+# 作用：导入 Python 标准库日志工具。
+import logging
+# 作用：创建当前 API 服务的日志记录器。
+logger = logging.getLogger("career_api")
+# 作用：设置日志级别为 INFO，记录正常运行信息和错误信息。
+logging.basicConfig(level=logging.INFO)
+
+
 # 作用：定义客户端发送的技能进度请求体。
 class ProgressUpdate(BaseModel):
     # 作用：掌握度必须是 0 到 100 之间的整数。
@@ -67,14 +75,27 @@ app = FastAPI(
 )
 
 
-# 作用：查询优先级技能，并声明返回一个 PrioritySkill 列表。
+# 作用：定义查询优先级技能的 GET 接口。
 @app.get("/skills/priority", response_model=list[PrioritySkill])
 def read_priority_skills(
     # 作用：接收最低优先级，并限制在 1 到 5 之间。
     minimum_priority: int = Query(default=4, ge=1, le=5),
 ):
-    # 作用：查询数据库，并让 FastAPI 按 PrioritySkill 模型校验返回结果。
-    return get_priority_skills(minimum_priority)
+    # 作用：记录本次接口收到的查询参数。
+    logger.info(
+        "查询优先级技能，minimum_priority=%s",
+        minimum_priority,
+    )
+
+    # 作用：调用数据库访问层并返回结果。
+    result = get_priority_skills(minimum_priority)
+
+    # 作用：记录本次返回了多少条数据。
+    logger.info("查询完成，返回 %s 条技能记录", len(result))
+
+    # 作用：将查询结果返回给客户端。
+    return result
+
 
 
 # 作用：查询岗位技能缺口，并声明返回一个 SkillGap 列表。
@@ -111,3 +132,15 @@ def update_progress(
             status_code=404,
             detail=str(error),
         )
+
+# 作用：提供服务健康检查接口。
+@app.get("/health")
+def health_check():
+    # 作用：记录健康检查请求。
+    logger.info("健康检查请求成功")
+
+    # 作用：返回简单状态，供监控系统判断服务是否存活。
+    return {
+        "status": "ok",
+        "service": "career-api",
+    }
