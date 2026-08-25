@@ -19,6 +19,11 @@ from sklearn.linear_model import LogisticRegression
 # 作用：导入分类准确率和详细评估报告。
 from sklearn.metrics import accuracy_score, classification_report
 
+# 作用：导入交叉验证函数，用多个数据划分评估模型稳定性。
+from sklearn.model_selection import cross_val_score
+
+# 作用：导入混淆矩阵计算函数。
+from sklearn.metrics import confusion_matrix
 
 # 作用：加载 Iris 数据集。
 dataset = load_iris()
@@ -90,11 +95,51 @@ model = make_pipeline(
     LogisticRegression(max_iter=1000),
 )
 
+# 作用：使用 5 折交叉验证评估模型。
+# features 和 labels 会被分成 5 份，每一份轮流作为验证集。
+cross_validation_scores = cross_val_score(
+    model,
+    features,
+    labels,
+    cv=5,
+    scoring="accuracy",
+)
+
+# 作用：计算 5 次验证结果的平均准确率。
+cross_validation_mean = cross_validation_scores.mean()
+
+# 作用：计算 5 次验证结果的标准差。
+# 标准差越小，说明模型在不同数据划分下越稳定。
+cross_validation_std = cross_validation_scores.std()
+
+# 作用：输出每一折的准确率。
+print("\n每一折的交叉验证准确率：")
+print(cross_validation_scores)
+
+# 作用：输出平均准确率和稳定性波动。
+print(
+    f"交叉验证平均准确率：{cross_validation_mean:.2%}"
+)
+print(
+    f"交叉验证标准差：{cross_validation_std:.2%}"
+)
+
+
+
 # 作用：让模型根据训练数据学习特征与标签之间的关系。
 model.fit(features_train, labels_train)
 
 # 作用：让训练好的模型预测测试集的类别。
 predicted_labels = model.predict(features_test)
+# 作用：根据真实标签和预测标签统计分类结果。
+confusion = confusion_matrix(
+    labels_test,
+    predicted_labels,
+)
+
+# 作用：输出混淆矩阵。
+print("\n混淆矩阵：")
+print(confusion)
 
 # 作用：计算预测正确的比例。
 accuracy = accuracy_score(labels_test, predicted_labels)
