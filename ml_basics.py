@@ -261,3 +261,45 @@ for tree_depth in tree_depths:
         f"训练准确率={train_accuracy:.2%}，"
         f"测试准确率={test_accuracy:.2%}"
     )
+
+    # 作用：定义要比较的正则化参数 C。
+# C 越小，正则化越强；C 越大，正则化越弱。
+regularization_values = [0.01, 0.1, 1, 10, 100]
+
+
+# 作用：输出正则化实验标题。
+print("\n不同正则化强度的交叉验证结果：")
+
+
+# 作用：逐个测试不同的 C 值。
+for regularization_value in regularization_values:
+    # 作用：创建带标准化和逻辑回归的完整机器学习流程。
+    regularized_model = make_pipeline(
+        StandardScaler(),
+        LogisticRegression(
+            C=regularization_value,
+            max_iter=1000,
+        ),
+    )
+
+    # 作用：使用 5 折交叉验证评估当前正则化设置。
+    regularized_scores = cross_val_score(
+        regularized_model,
+        features,
+        labels,
+        cv=5,
+        scoring="accuracy",
+    )
+
+    # 作用：计算当前正则化设置的平均准确率。
+    regularized_mean = regularized_scores.mean()
+
+    # 作用：计算当前正则化设置的稳定性波动。
+    regularized_std = regularized_scores.std()
+
+    # 作用：输出 C 值、平均准确率和标准差。
+    print(
+        f"C={regularization_value}："
+        f"平均准确率={regularized_mean:.2%}，"
+        f"标准差={regularized_std:.2%}"
+    )
