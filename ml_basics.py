@@ -303,3 +303,42 @@ for regularization_value in regularization_values:
         f"平均准确率={regularized_mean:.2%}，"
         f"标准差={regularized_std:.2%}"
     )
+
+    # 作用：创建一棵限制深度的决策树，便于观察其学习到的规则。
+interpretable_tree = DecisionTreeClassifier(
+    max_depth=3,
+    random_state=42,
+)
+
+# 作用：使用训练集训练这棵决策树。
+interpretable_tree.fit(
+    features_train,
+    labels_train,
+)
+
+# 作用：读取决策树为每个特征计算出的重要性分数。
+feature_importance_scores = interpretable_tree.feature_importances_
+
+# 作用：将特征名称和重要性分数配对。
+feature_importance_pairs = zip(
+    feature_names,
+    feature_importance_scores,
+)
+
+# 作用：按照重要性从高到低排序。
+sorted_feature_importance = sorted(
+    feature_importance_pairs,
+    key=lambda item: item[1],
+    reverse=True,
+)
+
+# 作用：输出特征重要性结果。
+print("\n特征重要性：")
+
+# 作用：逐项读取特征名称和对应的重要性分数。
+for feature_name, importance_score in sorted_feature_importance:
+    # 作用：将重要性以百分比形式输出，便于阅读。
+    print(
+        f"{feature_name}："
+        f"{importance_score:.2%}"
+    )
