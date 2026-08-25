@@ -25,6 +25,15 @@ from sklearn.model_selection import cross_val_score
 # 作用：导入混淆矩阵计算函数。
 from sklearn.metrics import confusion_matrix
 
+# 作用：导入永远预测多数类别的基线模型。
+from sklearn.dummy import DummyClassifier
+
+# 作用：导入决策树分类器。
+from sklearn.tree import DecisionTreeClassifier
+
+# 作用：导入随机森林分类器。
+from sklearn.ensemble import RandomForestClassifier
+
 # 作用：加载 Iris 数据集。
 dataset = load_iris()
 
@@ -156,3 +165,99 @@ print(
         target_names=dataset.target_names,
     )
 )
+
+# 作用：创建多个候选模型，准备在相同数据上进行比较。
+candidate_models = {
+    # 作用：创建一个最简单的基线模型。
+    "多数类基线": DummyClassifier(
+        strategy="most_frequent",
+    ),
+
+    # 作用：创建带标准化步骤的逻辑回归模型。
+    "逻辑回归": make_pipeline(
+        StandardScaler(),
+        LogisticRegression(max_iter=1000),
+    ),
+
+    # 作用：创建限制树深度的决策树，降低过拟合风险。
+    "决策树": DecisionTreeClassifier(
+        max_depth=3,
+        random_state=42,
+    ),
+
+    # 作用：创建由多棵决策树组成的随机森林。
+    "随机森林": RandomForestClassifier(
+        n_estimators=100,
+        random_state=42,
+    ),
+}
+
+
+# 作用：输出模型比较标题。
+print("\n模型交叉验证比较：")
+
+# 作用：逐个取出模型名称和模型对象。
+for model_name, candidate_model in candidate_models.items():
+    # 作用：对当前模型执行 5 折交叉验证。
+    model_scores = cross_val_score(
+        candidate_model,
+        features,
+        labels,
+        cv=5,
+        scoring="accuracy",
+    )
+
+    # 作用：计算当前模型 5 折准确率的平均值。
+    model_mean_score = model_scores.mean()
+
+    # 作用：计算当前模型准确率的标准差，衡量稳定性。
+    model_std_score = model_scores.std()
+
+    # 作用：输出当前模型的平均成绩和波动范围。
+    print(
+        f"{model_name}："
+        f"平均准确率={model_mean_score:.2%}，"
+        f"标准差={model_std_score:.2%}"
+    )
+
+    # 作用：定义要测试的决策树深度。
+# 深度越大，模型能学习的规则越复杂。
+tree_depths = [1, 2, 3, 5, 10]
+
+
+# 作用：输出不同树深度的实验标题。
+print("\n不同决策树深度的训练集与测试集表现：")
+
+
+# 作用：逐个测试不同的决策树深度。
+for tree_depth in tree_depths:
+    # 作用：创建当前深度的决策树模型。
+    depth_model = DecisionTreeClassifier(
+        max_depth=tree_depth,
+        random_state=42,
+    )
+
+    # 作用：使用训练集训练当前深度的决策树。
+    depth_model.fit(
+        features_train,
+        labels_train,
+    )
+
+    # 作用：计算模型在训练集上的准确率。
+    train_accuracy = depth_model.score(
+        features_train,
+        labels_train,
+    )
+
+    # 作用：计算模型在从未参与训练的测试集上的准确率。
+    test_accuracy = depth_model.score(
+        features_test,
+        labels_test,
+    )
+
+    # 作用：输出当前深度的训练表现和测试表现。
+    print(
+        f"树深度={tree_depth}："
+        f"训练准确率={train_accuracy:.2%}，"
+        f"测试准确率={test_accuracy:.2%}"
+    )
